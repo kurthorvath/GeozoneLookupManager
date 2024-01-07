@@ -9,7 +9,7 @@ import (
 )
 
 func forward2Request(LD string) {
-	posturl := "http://127.0.0.1:9000"
+	posturl := "http://127.0.0.1:7900"
 	body := []byte(LD)
 
 	r, err := http.NewRequest("POST", posturl, bytes.NewBuffer(body))
