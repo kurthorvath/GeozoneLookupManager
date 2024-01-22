@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 type GeoJson struct {
@@ -40,11 +40,11 @@ type GeoJsonDB struct {
 }
 
 func (d GeoJsonDB) read() {
-	files, err := ioutil.ReadDir("files/")
+	files, err := os.ReadDir("files/")
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	fmt.Println("reading ...")
 	for _, file := range files {
 		fmt.Println(file.Name(), file.IsDir())
 	}
@@ -59,9 +59,6 @@ func forward2Request(LD string) {
 	if err != nil {
 		panic(err)
 	}
-
-	var myDB GeoJsonDB
-	myDB.read()
 
 	client := &http.Client{}
 	res, err := client.Do(r)
@@ -85,6 +82,10 @@ func inputConsul(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	fmt.Println("--- Geozone Lookup Manager ---")
+
+	var myDB GeoJsonDB
+	myDB.read()
+
 	http.HandleFunc("/", inputConsul)
 	log.Fatal(http.ListenAndServe(":7000", nil))
 }
