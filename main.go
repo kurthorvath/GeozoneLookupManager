@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 )
+
+type Requestdata []string
 
 type GeoJson struct {
 	Type string `json:"type"`
@@ -67,6 +70,27 @@ func forward2Request(LD string) {
 	}
 	fmt.Println("forward LD", LD, "to", posturl, res)
 }
+func isValid(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "OK")
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	//bodyString := string(bodyBytes)
+	var Requestdata []string
+
+	err = json.Unmarshal(bodyBytes, &Requestdata)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// printing decoded array
+	// values one by one
+	for i := range Requestdata {
+		fmt.Println(Requestdata[i])
+	}
+}
 
 func inputConsul(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "OK")
@@ -87,5 +111,6 @@ func main() {
 	myDB.read()
 
 	http.HandleFunc("/", inputConsul)
+	http.HandleFunc("/isvalid", isValid)
 	log.Fatal(http.ListenAndServe(":7000", nil))
 }
