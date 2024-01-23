@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Requestdata []string
@@ -34,8 +35,18 @@ type GeoJson struct {
 	} `json:"features"`
 }
 
+const (
+	Summer int = 0
+	Autumn     = 1
+	Winter     = 2
+	Spring     = 3
+)
+
 type GeoJsonData struct {
-	DB []GeoJson
+	from time.Time
+	to   time.Time
+	//curr_state State
+	DB GeoJson
 }
 
 type GeoJsonDB struct {
@@ -52,6 +63,24 @@ func (d GeoJsonDB) read() {
 		fmt.Println(file.Name(), file.IsDir())
 	}
 
+}
+
+func (d GeoJsonDB) validate(a string) bool {
+	files, err := os.ReadDir("files/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("reading ...")
+	for _, file := range files {
+		name := file.Name()
+		name = name[:len(name)-8]
+		fmt.Println(name, " ? ", a)
+		if name == a {
+			return true
+		}
+
+	}
+	return false
 }
 
 func forward2Request(LD string) {
@@ -71,7 +100,7 @@ func forward2Request(LD string) {
 	fmt.Println("forward LD", LD, "to", posturl, res)
 }
 func isValid(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "OK")
+	//fmt.Fprintf(w, "OK")
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println(err)
@@ -85,11 +114,19 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	// printing decoded array
-	// values one by one
+	var myDB GeoJsonDB
+	myDB.read()
+
 	for i := range Requestdata {
 		fmt.Println(Requestdata[i])
+		ret := myDB.validate(Requestdata[i])
+		if ret == true {
+			w.WriteHeader(http.StatusOK)
+		}
 	}
+	fmt.Println("could not find")
+	w.WriteHeader(http.StatusNotFound)
+
 }
 
 func inputConsul(w http.ResponseWriter, r *http.Request) {
@@ -104,13 +141,15 @@ func inputConsul(w http.ResponseWriter, r *http.Request) {
 	forward2Request(bodyString)
 }
 
+func whoami(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "GeozoneLookup Manager")
+}
+
 func main() {
 	fmt.Println("--- Geozone Lookup Manager ---")
 
-	var myDB GeoJsonDB
-	myDB.read()
-
 	http.HandleFunc("/", inputConsul)
 	http.HandleFunc("/isvalid", isValid)
+	http.HandleFunc("/whoami", whoami)
 	log.Fatal(http.ListenAndServe(":7000", nil))
 }
