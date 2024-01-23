@@ -36,24 +36,71 @@ type GeoJson struct {
 }
 
 const (
-	Summer int = 0
-	Autumn     = 1
-	Winter     = 2
-	Spring     = 3
+	active   int = 0
+	inactive     = 1
+	blocked      = 2
 )
 
 type GeoJsonData struct {
-	from time.Time
-	to   time.Time
-	//curr_state State
-	DB GeoJson
+	name       string
+	from       time.Time
+	to         time.Time
+	curr_state int
+	DB         GeoJson
+}
+
+func (d GeoJsonData) init(in GeoJson, name string) GeoJsonData {
+	fmt.Println("init", name)
+	d.name = name
+	d.from = time.Now()
+	d.to = d.from.Add(25 * time.Hour)
+	d.curr_state = active
+	d.DB = in
+	return d
 }
 
 type GeoJsonDB struct {
 	DB []GeoJsonData
 }
 
-func (d GeoJsonDB) read() {
+func (d GeoJsonDB) read() []GeoJsonData {
+	file, err := os.Open("files/")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer file.Close()
+
+	list, err := file.Readdir(-1)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range list {
+		fmt.Println(f.Name())
+
+		//b1 := make([]byte, 100)
+		contents, err := os.ReadFile("files/" + f.Name())
+		if err != nil {
+			fmt.Println("File reading error", err)
+		}
+		//fmt.Println("Contents of file:", string(contents))
+
+		//jsonFile := "files/" + file.Name()
+		//byteValue, _ := ioutil.Read(file)
+		var data GeoJson
+		json.Unmarshal(contents, &data)
+
+		var df GeoJsonData
+
+		d.DB = append(d.DB, df.init(data, f.Name()))
+		//fmt.Println("db->", d.DB)
+
+	}
+	return d.DB
+}
+
+func (d GeoJsonDB) init() {
 	files, err := os.ReadDir("files/")
 	if err != nil {
 		log.Fatal(err)
@@ -62,24 +109,27 @@ func (d GeoJsonDB) read() {
 	for _, file := range files {
 		fmt.Println(file.Name(), file.IsDir())
 	}
-
 }
 
 func (d GeoJsonDB) validate(a string) bool {
-	files, err := os.ReadDir("files/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("reading ...")
-	for _, file := range files {
-		name := file.Name()
+	/*
+		files, err := os.ReadDir("files/")
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+	fmt.Println("reading ...", len(d.DB))
+
+	for _, geo := range d.DB {
+		name := geo.name
 		name = name[:len(name)-8]
-		fmt.Println(name, " ? ", a)
+		fmt.Println(name, " ? ", a, geo.from, geo.to)
 		if name == a {
 			return true
 		}
 
 	}
+
 	return false
 }
 
@@ -115,7 +165,7 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var myDB GeoJsonDB
-	myDB.read()
+	myDB.DB = myDB.read()
 
 	for i := range Requestdata {
 		fmt.Println(Requestdata[i])
@@ -124,7 +174,7 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}
 	}
-	fmt.Println("could not find")
+	//fmt.Println(myDB.DB)
 	w.WriteHeader(http.StatusNotFound)
 
 }
