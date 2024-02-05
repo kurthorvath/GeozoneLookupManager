@@ -111,26 +111,18 @@ func (d GeoJsonDB) init() {
 	}
 }
 
-func (d GeoJsonDB) validate(a string) bool {
-	/*
-		files, err := os.ReadDir("files/")
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
-	fmt.Println("reading ...", len(d.DB))
-
-	for _, geo := range d.DB {
-		name := geo.name
+func (d GeoJsonDB) validate(a string) {
+	files, err := os.ReadDir("files/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("reading ...")
+	for _, file := range files {
+		name := file.Name()
 		name = name[:len(name)-8]
-		fmt.Println(name, " ? ", a, geo.from, geo.to)
-		if name == a {
-			return true
-		}
-
+		fmt.Println(name)
 	}
 
-	return false
 }
 
 func forward2Request(LD string) {
@@ -165,14 +157,10 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var myDB GeoJsonDB
-	myDB.DB = myDB.read()
 
 	for i := range Requestdata {
 		fmt.Println(Requestdata[i])
-		ret := myDB.validate(Requestdata[i])
-		if ret == true {
-			w.WriteHeader(http.StatusOK)
-		}
+		myDB.validate(Requestdata[i])
 	}
 	//fmt.Println(myDB.DB)
 	w.WriteHeader(http.StatusNotFound)
@@ -181,6 +169,10 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 
 func inputConsul(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "OK")
+
+	var myDB GeoJsonDB
+	myDB.read()
+
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println(err)
