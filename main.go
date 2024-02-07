@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -111,7 +112,7 @@ func (d GeoJsonDB) init() {
 	}
 }
 
-func (d GeoJsonDB) validate(a string) {
+func (d GeoJsonDB) validate(a string) bool {
 	files, err := os.ReadDir("files/")
 	if err != nil {
 		log.Fatal(err)
@@ -120,9 +121,12 @@ func (d GeoJsonDB) validate(a string) {
 	for _, file := range files {
 		name := file.Name()
 		name = name[:len(name)-8]
+		if name == a {
+			return true
+		}
 		fmt.Println(name)
 	}
-
+	return false
 }
 
 func forward2Request(LD string) {
@@ -180,7 +184,10 @@ func inputConsul(w http.ResponseWriter, r *http.Request) {
 	bodyString := string(bodyBytes)
 
 	fmt.Println("got data: ", bodyString)
-	forward2Request(bodyString)
+	bodyString = strings.ReplaceAll(bodyString, ".service.consul", "")
+	if myDB.validate(bodyString) == true {
+		forward2Request(bodyString)
+	}
 }
 
 func whoami(w http.ResponseWriter, r *http.Request) {
