@@ -112,6 +112,12 @@ func (d GeoJsonDB) init() {
 	}
 }
 
+type validationResult struct {
+	Ld       string `json:"LD"`
+	ID       int    `json:"Id"`
+	Ipadress string `json:"Ipadress"`
+}
+
 func (d GeoJsonDB) validate(a string) bool {
 	files, err := os.ReadDir("files/")
 	if err != nil {
@@ -124,7 +130,7 @@ func (d GeoJsonDB) validate(a string) bool {
 		if name == a {
 			return true
 		}
-		fmt.Println(name)
+		fmt.Println(name, a)
 	}
 	return false
 }
@@ -164,7 +170,15 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 
 	for i := range Requestdata {
 		fmt.Println(Requestdata[i])
-		myDB.validate(Requestdata[i])
+		if myDB.validate(Requestdata[i]) == true {
+			var ret validationResult
+			ret.Ld = Requestdata[i]
+			ret.ID = 2 //later read from config
+			ret.Ipadress = "3.16.183.50"
+
+			j, _ := json.Marshal(ret)
+			fmt.Fprintf(w, string(j))
+		}
 	}
 	//fmt.Println(myDB.DB)
 	w.WriteHeader(http.StatusNotFound)
@@ -172,7 +186,6 @@ func isValid(w http.ResponseWriter, r *http.Request) {
 }
 
 func inputConsul(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "OK")
 
 	var myDB GeoJsonDB
 	myDB.read()
@@ -186,8 +199,15 @@ func inputConsul(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("got data: ", bodyString)
 	bodyString = strings.ReplaceAll(bodyString, ".service.consul", "")
 	if myDB.validate(bodyString) == true {
-		forward2Request(bodyString)
+		var ret validationResult
+		ret.Ld = bodyString
+		ret.ID = 2 //later read from config
+		ret.Ipadress = "3.16.183.50"
+
+		j, _ := json.Marshal(ret)
+		forward2Request(string(j))
 	}
+	fmt.Fprintf(w, "NOK")
 }
 
 func whoami(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +215,7 @@ func whoami(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	fmt.Println("--- Geozone Lookup Manager ---")
+	fmt.Println("--- Geozone Lookup Manager (:7000)---")
 
 	http.HandleFunc("/", inputConsul)
 	http.HandleFunc("/isvalid", isValid)
